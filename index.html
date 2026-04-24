@@ -1000,7 +1000,7 @@ function renderList() {
       '<td>'+escapeHtml(r.clinic)+'</td>' +
       '<td>'+escapeHtml(r.position)+'</td>' +
       '<td>'+escapeHtml(r.jobType)+'</td>' +
-      '<td>'+escapeHtml(r.hireDate)+'</td>' +
+      '<td>'+escapeHtml(fmtDateShort(r.hireDate))+'</td>' +
       '<td>'+escapeHtml(r.tenure)+'</td>' +
       '<td>'+escapeHtml(r.mobile)+'</td>' +
       '<td>' +
@@ -1092,8 +1092,8 @@ function buildDetailHtml(r) {
       '<div style="padding:6px 0;"><a href="'+escapeHtml(url)+'" target="_blank">檢視檔案 ↗</a></div></div>';
   }
   return '<div class="form-grid cols-4">' +
-    row('員工編號', r.empNo) + row('姓名', r.name) + row('院區', r.clinic) + row('到職日', r.hireDate) +
-    row('年資', r.tenure) + row('職稱', r.position) + row('職類', r.jobType) + row('出生', r.birthday) +
+    row('員工編號', r.empNo) + row('姓名', r.name) + row('院區', r.clinic) + row('到職日', fmtDateShort(r.hireDate)) +
+    row('年資', r.tenure) + row('職稱', r.position) + row('職類', r.jobType) + row('出生', fmtDateShort(r.birthday)) +
     row('身分證', r.idNo) + row('電話', r.tel) + row('行動', r.mobile) + row('Email', r.email) +
     '<div class="field full"><label>地址</label><div style="padding:6px 0;">'+escapeHtml(r.address||'—')+'</div></div>' +
     row('推介人', r.referrer) + row('','') + row('','') + row('','') +
@@ -1101,8 +1101,8 @@ function buildDetailHtml(r) {
     row('學歷', r.education) + row('學校', r.school) + row('畢/肄', r.gradStatus) + row('', '') +
     row('薪轉分行', r.bankBranch) + row('薪轉帳號', r.bankAccount) + row('', '') + row('', '') +
     fileRow('存摺', r.passbookUrl) + fileRow('身分證正面', r.idFrontUrl) + fileRow('身分證背面', r.idBackUrl) + row('', '') +
-    row('眷屬概述', r.depListName) + row('眷屬姓名', r.depName) + row('關係', r.depRelation) + row('出生', r.depBirthday) +
-    row('眷屬身分證', r.depIdNo) + row('建立者', r.creator) + row('建立時間', r.createTime) + row('修改', (r.modifier||'')+' '+(r.modifyTime||'')) +
+    row('眷屬概述', r.depListName) + row('眷屬姓名', r.depName) + row('關係', r.depRelation) + row('出生', fmtDateShort(r.depBirthday)) +
+    row('眷屬身分證', r.depIdNo) + row('建立者', r.creator) + row('建立時間', fmtDateTimeShort(r.createTime)) + row('修改', (r.modifier||'')+' '+fmtDateTimeShort(r.modifyTime)) +
   '</div>';
 }
 function closeModal() {
@@ -1117,13 +1117,13 @@ function editEmp() {
   closeModal();
   _editMode = true;
   var map = {
-    empNo:r.empNo,name:r.name,clinic:r.clinic,hireDate:r.hireDate,position:r.position,
-    jobType:r.jobType,birthday:r.birthday,idNo:r.idNo,tel:r.tel,mobile:r.mobile,email:r.email,
+    empNo:r.empNo,name:r.name,clinic:r.clinic,hireDate:fmtDateShort(r.hireDate),position:r.position,
+    jobType:r.jobType,birthday:fmtDateShort(r.birthday),idNo:r.idNo,tel:r.tel,mobile:r.mobile,email:r.email,
     address:r.address,referrer:r.referrer,emgName:r.emgName,emgRelation:r.emgRelation,emgPhone:r.emgPhone,
     education:r.education,school:r.school,gradStatus:r.gradStatus,
     bankBranch:r.bankBranch,bankAccount:r.bankAccount,
     depListName:r.depListName,depName:r.depName,depRelation:r.depRelation,
-    depBirthday:r.depBirthday,depIdNo:r.depIdNo
+    depBirthday:fmtDateShort(r.depBirthday),depIdNo:r.depIdNo
   };
   Object.keys(map).forEach(function(k){
     var el = document.getElementById('f_'+k);
@@ -1203,6 +1203,35 @@ function escapeHtml(s) {
   return String(s==null?'':s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// 顯示用：只保留日期 YYYY-MM-DD
+function fmtDateShort(v) {
+  if (!v) return '';
+  var s = String(v);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  var d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  var y = d.getFullYear();
+  var m = String(d.getMonth()+1).padStart(2,'0');
+  var dd = String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+dd;
+}
+// 顯示用：YYYY-MM-DD HH:mm
+function fmtDateTimeShort(v) {
+  if (!v) return '';
+  var s = String(v);
+  var m1 = s.match(/^(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2})/);
+  if (m1) return m1[1].replace('T',' ');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  var d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  var y = d.getFullYear();
+  var mm = String(d.getMonth()+1).padStart(2,'0');
+  var dd = String(d.getDate()).padStart(2,'0');
+  var hh = String(d.getHours()).padStart(2,'0');
+  var mi = String(d.getMinutes()).padStart(2,'0');
+  return y+'-'+mm+'-'+dd+' '+hh+':'+mi;
 }
 
 // ==================================================
