@@ -237,6 +237,48 @@
   }
   tbody tr:hover { background: var(--tl); }
 
+  /* 在職狀態切換鈕 */
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 64px;
+    height: 26px;
+    cursor: pointer;
+    vertical-align: middle;
+  }
+  .switch input { display: none; }
+  .switch-slider {
+    position: absolute; inset: 0;
+    background: #d0d0d0;
+    border-radius: 26px;
+    transition: background 0.2s;
+  }
+  .switch-slider::before {
+    content: "";
+    position: absolute;
+    width: 22px; height: 22px;
+    left: 2px; top: 2px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .switch input:checked + .switch-slider { background: var(--ok); }
+  .switch input:checked + .switch-slider::before { transform: translateX(38px); }
+  .switch-label {
+    position: absolute;
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  .switch input:checked ~ .switch-label { left: 7px; }
+  .switch input:not(:checked) ~ .switch-label { right: 7px; }
+  .status-left { color: var(--err); font-weight: bold; }
+  .status-active { color: var(--ok); font-weight: bold; }
+
   /* Toast */
   #toast {
     position: fixed;
@@ -538,6 +580,14 @@
             <select id="q_position"><option value="">全部</option></select>
           </div>
           <div class="field">
+            <label>在職狀態</label>
+            <select id="q_status">
+              <option value="">全部</option>
+              <option value="在職">在職</option>
+              <option value="離職">離職</option>
+            </select>
+          </div>
+          <div class="field">
             <label>到職日 起</label>
             <input id="q_from" type="date">
           </div>
@@ -557,13 +607,16 @@
         </div>
       </div>
       <div class="card">
-        <h2>查詢結果 (<span id="listCount">0</span>)</h2>
+        <h2>
+          查詢結果 (<span id="listCount">0</span>)
+          <span id="statsBar" style="float:right;font-size:13px;font-weight:normal;color:var(--muted);"></span>
+        </h2>
         <div class="tbl-wrap">
           <table id="listTable">
             <thead>
               <tr>
                 <th>員工編號</th><th>姓名</th><th>院區</th><th>職稱</th><th>職類</th>
-                <th>到職日</th><th>年資</th><th>行動電話</th><th>操作</th>
+                <th>到職日</th><th>年資</th><th>行動電話</th><th>操作</th><th>在職狀態</th>
               </tr>
             </thead>
             <tbody id="listBody"></tbody>
@@ -900,6 +953,7 @@ function doQuery() {
     clinic:  document.getElementById('q_clinic').value,
     jobType: document.getElementById('q_jobType').value,
     position:document.getElementById('q_position').value,
+    status:  document.getElementById('q_status').value,
     keyword: document.getElementById('q_keyword').value,
     hireFrom:document.getElementById('q_from').value,
     hireTo:  document.getElementById('q_to').value
@@ -908,18 +962,31 @@ function doQuery() {
     if (r.error) { toast(r.error,'err'); return; }
     _listRecs = r.records || [];
     renderList();
+    updateStatsBar();
   });
 }
 function renderList() {
   document.getElementById('listCount').textContent = _listRecs.length;
   var body = document.getElementById('listBody');
   if (_listRecs.length === 0) {
-    body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">無符合資料</td></tr>';
+    body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">無符合資料</td></tr>';
     return;
   }
   var html = '';
   _listRecs.forEach(function(r, idx){
-    html += '<tr>' +
+    var isActive = (r.status !== '離職');
+    var switchHtml =
+      '<label class="switch" title="點擊切換在職狀態" onclick="event.stopPropagation();">' +
+        '<input type="checkbox" '+(isActive?'checked':'')+' onchange="onStatusToggle('+idx+', this)">' +
+        '<span class="switch-slider"></span>' +
+        '<span class="switch-label">'+(isActive?'在職':'離職')+'</span>' +
+      '</label>';
+    var leftInfo = r.status === '離職' && r.leaveDate
+      ? '<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+escapeHtml(r.leaveDate)+'</div>'
+      : '';
+    var rowStyle = r.status === '離職' ? ' style="background:#faf3f3;color:#999;"' : '';
+
+    html += '<tr'+rowStyle+'>' +
       '<td>'+escapeHtml(r.empNo)+'</td>' +
       '<td>'+escapeHtml(r.name)+'</td>' +
       '<td>'+escapeHtml(r.clinic)+'</td>' +
@@ -928,15 +995,72 @@ function renderList() {
       '<td>'+escapeHtml(r.hireDate)+'</td>' +
       '<td>'+escapeHtml(r.tenure)+'</td>' +
       '<td>'+escapeHtml(r.mobile)+'</td>' +
-      '<td><button class="btn sm" onclick="showDetail('+idx+')">詳細</button></td>' +
+      '<td>' +
+        '<button class="btn sm" onclick="showDetail('+idx+')">詳細</button> ' +
+        '<button class="btn sm secondary" onclick="editFromList('+idx+')">修改</button>' +
+      '</td>' +
+      '<td>' + switchHtml + leftInfo + '</td>' +
       '</tr>';
   });
   body.innerHTML = html;
 }
+function updateStatsBar() {
+  var total = _listRecs.length;
+  var active = 0, left = 0;
+  _listRecs.forEach(function(r){ if (r.status === '離職') left++; else active++; });
+  var rate = total>0 ? (left/total*100).toFixed(1) + '%' : '0%';
+  document.getElementById('statsBar').innerHTML =
+    '總數 <b>'+total+'</b> ・ ' +
+    '<span class="status-active">在職 '+active+'</span> ・ ' +
+    '<span class="status-left">離職 '+left+'</span> ・ ' +
+    '離職率 <b>'+rate+'</b>';
+}
 function resetFilter() {
   ['q_keyword','q_from','q_to'].forEach(function(id){ document.getElementById(id).value=''; });
-  ['q_clinic','q_position','q_jobType'].forEach(function(id){ document.getElementById(id).selectedIndex=0; });
+  ['q_clinic','q_position','q_jobType','q_status'].forEach(function(id){ document.getElementById(id).selectedIndex=0; });
   doQuery();
+}
+
+// 列表內切換在職/離職
+function onStatusToggle(idx, chk) {
+  var r = _listRecs[idx];
+  if (!r) return;
+  var target = chk.checked ? '在職' : '離職';
+  var leaveDate = '';
+  if (target === '離職') {
+    var today = new Date().toISOString().slice(0,10);
+    leaveDate = prompt('請輸入離職日 (YYYY-MM-DD)，直接確定=今天', today) || today;
+  }
+  // 鎖住切換鈕避免重複點
+  chk.disabled = true;
+  apiGet({
+    action: 'toggleStatus',
+    empNo: r.empNo,
+    setStatus: target,
+    leaveDate: leaveDate,
+    _user: CURRENT_USER ? CURRENT_USER.name : ''
+  }, function(resp){
+    chk.disabled = false;
+    if (resp.error) {
+      toast(resp.error,'err');
+      chk.checked = !chk.checked;  // 復原
+      return;
+    }
+    // 更新本地記錄並重繪
+    r.status = resp.status;
+    r.leaveDate = (resp.status === '離職') ? leaveDate : '';
+    renderList();
+    updateStatsBar();
+    toast('已切換為 '+resp.status,'ok');
+  });
+}
+
+// 列表直接修改（快速路徑，不開詳細 Modal）
+function editFromList(idx) {
+  var r = _listRecs[idx];
+  if (!r) return;
+  _currentDetail = r;
+  editEmp();
 }
 
 // ==================================================
