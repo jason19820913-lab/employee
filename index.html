@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>金鶯診所｜員工人事管理系統</title>
+<style>
+  :root {
+    --primary: #b88a3a;
+    --primary-dark: #8f6a24;
+    --bg: #fcf9f3;
+    --card: #ffffff;
+    --text: #2a2a2a;
+    --muted: #7a7a7a;
+    --border: #e5ddc8;
+    --ok: #2e8b57;
+    --err: #c0392b;
+    --tl: #fff4db;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+  }
+  header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  .user-info { font-size: 14px; opacity: 0.95; }
+  .user-info button {
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 10px;
+    font-size: 13px;
+  }
+  .user-info button:hover { background: rgba(255,255,255,0.28); }
+
+  nav {
+    background: white;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 4px;
+  }
+  nav button {
+    background: transparent;
+    border: none;
+    padding: 12px 20px;
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--muted);
+    border-bottom: 3px solid transparent;
+    font-family: inherit;
+  }
+  nav button.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    font-weight: 600;
+  }
+  nav button:hover { color: var(--primary-dark); }
+
+  main { padding: 20px 24px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card h2 {
+    margin: 0 0 14px 0;
+    font-size: 16px;
+    color: var(--primary-dark);
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  /* Login */
+  #viewLogin {
+    display: none;
+    min-height: calc(100vh - 60px);
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  #viewLogin.active { display: flex; }
+  .login-box {
+    background: white;
+    padding: 36px;
+    border-radius: 10px;
+    width: 360px;
+    max-width: 100%;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  .login-box h1 {
+    text-align: center;
+    color: var(--primary-dark);
+    margin: 0 0 24px 0;
+    font-size: 22px;
+  }
+
+  /* Form */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px 16px;
+  }
+  .form-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .form-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .field { display: flex; flex-direction: column; }
+  .field.full { grid-column: 1 / -1; }
+  .field label {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .field label .req { color: var(--err); margin-left: 2px; }
+  .field input, .field select, .field textarea {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: 14px;
+    font-family: inherit;
+    background: white;
+    color: var(--text);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(184,138,58,0.15);
+  }
+  .field input[readonly] { background: #f7f3ea; color: var(--muted); }
+
+  /* Buttons */
+  .btn {
+    padding: 9px 18px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--primary);
+    color: white;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: var(--primary-dark); }
+  .btn.secondary {
+    background: #eee;
+    color: var(--text);
+  }
+  .btn.secondary:hover { background: #ddd; }
+  .btn.danger { background: var(--err); }
+  .btn.danger:hover { background: #a53325; }
+  .btn.sm { padding: 5px 10px; font-size: 13px; }
+  .btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  /* Upload */
+  .upload-box {
+    border: 2px dashed var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+    background: #fdfbf5;
+    cursor: pointer;
+    position: relative;
+  }
+  .upload-box:hover { border-color: var(--primary); }
+  .upload-box input[type=file] { display: none; }
+  .upload-box .preview {
+    max-width: 100%;
+    max-height: 120px;
+    display: block;
+    margin: 0 auto 6px;
+    border-radius: 4px;
+  }
+  .upload-box .placeholder { color: var(--muted); font-size: 13px; padding: 18px 0; }
+  .upload-box a {
+    display: inline-block;
+    font-size: 12px;
+    color: var(--primary-dark);
+    margin-top: 4px;
+  }
+  .upload-box .remove-file {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background: var(--err);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+
+  /* Table */
+  .tbl-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  thead th {
+    background: #f5efdb;
+    padding: 10px 8px;
+    text-align: left;
+    border-bottom: 2px solid var(--primary);
+    font-weight: 600;
+    color: var(--primary-dark);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr:hover { background: var(--tl); }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    top: 70px;
+    right: 24px;
+    padding: 12px 20px;
+    border-radius: 6px;
+    color: white;
+    font-size: 14px;
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: all 0.25s;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.ok  { background: var(--ok); }
+  #toast.err { background: var(--err); }
+
+  /* Modal */
+  .modal-mask {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.45);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 100;
+    padding: 30px 16px;
+    overflow-y: auto;
+  }
+  .modal-mask.show { display: flex; }
+  .modal {
+    background: white;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 900px;
+    padding: 20px 24px 24px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  }
+  .modal h3 {
+    margin: 0 0 16px 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+    color: var(--primary-dark);
+  }
+
+  /* Filter bar */
+  .filter-bar {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .filter-bar .field { margin: 0; }
+
+  /* Loading */
+  #loading {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--primary);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s;
+    z-index: 10000;
+  }
+  #loading.active { transform: scaleX(0.8); }
+
+  @media (max-width: 900px) {
+    .form-grid, .form-grid.cols-2, .form-grid.cols-4 { grid-template-columns: 1fr 1fr; }
+    .filter-bar { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 600px) {
+    .form-grid, .form-grid.cols-2, .form-grid.cols-4 { grid-template-columns: 1fr; }
+    .filter-bar { grid-template-columns: 1fr; }
+    header h1 { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading"></div>
+<div id="toast"></div>
+
+<!-- 登入頁 -->
+<div id="viewLogin" class="view">
+  <div class="login-box">
+    <h1>金鶯診所｜人事管理系統</h1>
+    <div class="field" style="margin-bottom:12px;">
+      <label>帳號</label>
+      <input id="loginUser" type="text" autocomplete="username">
+    </div>
+    <div class="field" style="margin-bottom:16px;">
+      <label>密碼</label>
+      <input id="loginPwd" type="password" autocomplete="current-password">
+    </div>
+    <button class="btn" style="width:100%;" onclick="doLogin()">登入</button>
+    <p style="text-align:center;color:var(--muted);font-size:12px;margin-top:14px;">
+      首次使用請先在後端執行 <code>init</code> 初始化<br>
+      預設帳號: <code>admin</code> / <code>admin123</code>
+    </p>
+  </div>
+</div>
+
+<!-- 主頁 -->
+<div id="viewMain" class="view">
+  <header>
+    <h1>金鶯診所｜人事管理系統</h1>
+    <div class="user-info">
+      <span id="userLabel"></span>
+      <button onclick="logout()">登出</button>
+    </div>
+  </header>
+  <nav>
+    <button id="navForm" class="active" onclick="showTab('form')">員工建檔</button>
+    <button id="navList" onclick="showTab('list')">人事查詢</button>
+  </nav>
+  <main>
+
+    <!-- 員工建檔 -->
+    <div id="tabForm" class="view active">
+      <div class="card">
+        <h2>基本資料</h2>
+        <div class="form-grid">
+          <div class="field">
+            <label>員工編號 <span class="req">*</span></label>
+            <input id="f_empNo" type="text" placeholder="自動產生或手動輸入">
+          </div>
+          <div class="field">
+            <label>姓名 <span class="req">*</span></label>
+            <input id="f_name" type="text">
+          </div>
+          <div class="field">
+            <label>所屬院區 <span class="req">*</span></label>
+            <select id="f_clinic"></select>
+          </div>
+          <div class="field">
+            <label>到職日 <span class="req">*</span></label>
+            <input id="f_hireDate" type="date" onchange="updateTenure()">
+          </div>
+          <div class="field">
+            <label>計算年資</label>
+            <input id="f_tenure" type="text" readonly>
+          </div>
+          <div class="field">
+            <label>職稱</label>
+            <select id="f_position"></select>
+          </div>
+          <div class="field">
+            <label>職類</label>
+            <select id="f_jobType"></select>
+          </div>
+          <div class="field">
+            <label>出生年月日</label>
+            <input id="f_birthday" type="date">
+          </div>
+          <div class="field">
+            <label>身分證字號</label>
+            <input id="f_idNo" type="text" maxlength="10">
+          </div>
+          <div class="field">
+            <label>電話</label>
+            <input id="f_tel" type="text">
+          </div>
+          <div class="field">
+            <label>行動電話</label>
+            <input id="f_mobile" type="text">
+          </div>
+          <div class="field full">
+            <label>通訊地址</label>
+            <input id="f_address" type="text">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>緊急聯絡人</h2>
+        <div class="form-grid">
+          <div class="field">
+            <label>姓名</label>
+            <input id="f_emgName" type="text">
+          </div>
+          <div class="field">
+            <label>關係</label>
+            <select id="f_emgRelation"></select>
+          </div>
+          <div class="field">
+            <label>聯絡電話</label>
+            <input id="f_emgPhone" type="text">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>學歷資訊</h2>
+        <div class="form-grid">
+          <div class="field">
+            <label>最高學歷</label>
+            <select id="f_education"></select>
+          </div>
+          <div class="field">
+            <label>學校</label>
+            <input id="f_school" type="text">
+          </div>
+          <div class="field">
+            <label>畢業/肄業</label>
+            <select id="f_gradStatus"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>薪轉帳戶</h2>
+        <div class="form-grid cols-2">
+          <div class="field">
+            <label>薪轉分行</label>
+            <input id="f_bankBranch" type="text">
+          </div>
+          <div class="field">
+            <label>薪轉帳號</label>
+            <input id="f_bankAccount" type="text">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>檔案上傳 (存摺/身分證)</h2>
+        <div class="form-grid">
+          <div class="field">
+            <label>存摺上傳</label>
+            <div class="upload-box" onclick="document.getElementById('fu_passbook').click()" id="up_passbook">
+              <input type="file" id="fu_passbook" accept="image/*,.pdf" onchange="onFilePick(event,'passbook')">
+              <div class="placeholder">點擊上傳圖片或 PDF</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>身分證正面</label>
+            <div class="upload-box" onclick="document.getElementById('fu_idFront').click()" id="up_idFront">
+              <input type="file" id="fu_idFront" accept="image/*,.pdf" onchange="onFilePick(event,'idFront')">
+              <div class="placeholder">點擊上傳</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>身分證背面</label>
+            <div class="upload-box" onclick="document.getElementById('fu_idBack').click()" id="up_idBack">
+              <input type="file" id="fu_idBack" accept="image/*,.pdf" onchange="onFilePick(event,'idBack')">
+              <div class="placeholder">點擊上傳</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>健保眷屬</h2>
+        <div class="form-grid">
+          <div class="field full">
+            <label>眷屬概述 (自由填寫，例：配偶王小美、子王小強)</label>
+            <input id="f_depListName" type="text">
+          </div>
+          <div class="field">
+            <label>主要眷屬姓名</label>
+            <input id="f_depName" type="text">
+          </div>
+          <div class="field">
+            <label>關係</label>
+            <select id="f_depRelation"></select>
+          </div>
+          <div class="field">
+            <label>出生年月日</label>
+            <input id="f_depBirthday" type="date">
+          </div>
+          <div class="field full">
+            <label>身分證字號</label>
+            <input id="f_depIdNo" type="text" maxlength="10">
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn secondary" onclick="resetForm()">清空表單</button>
+        <button class="btn" id="btnSave" onclick="saveForm()">儲存員工資料</button>
+      </div>
+    </div>
+
+    <!-- 人事查詢 -->
+    <div id="tabList" class="view">
+      <div class="card">
+        <h2>篩選條件</h2>
+        <div class="filter-bar">
+          <div class="field">
+            <label>所屬院區</label>
+            <select id="q_clinic"><option value="">全部</option></select>
+          </div>
+          <div class="field">
+            <label>職類</label>
+            <select id="q_jobType"><option value="">全部</option></select>
+          </div>
+          <div class="field">
+            <label>職稱</label>
+            <select id="q_position"><option value="">全部</option></select>
+          </div>
+          <div class="field">
+            <label>到職日 起</label>
+            <input id="q_from" type="date">
+          </div>
+          <div class="field">
+            <label>到職日 訖</label>
+            <input id="q_to" type="date">
+          </div>
+          <div class="field">
+            <label>姓名 / 員工編號</label>
+            <input id="q_keyword" type="text" placeholder="模糊搜尋">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn secondary" onclick="resetFilter()">重設</button>
+          <button class="btn secondary" onclick="exportCsv()">匯出 CSV</button>
+          <button class="btn" onclick="doQuery()">查詢</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>查詢結果 (<span id="listCount">0</span>)</h2>
+        <div class="tbl-wrap">
+          <table id="listTable">
+            <thead>
+              <tr>
+                <th>員工編號</th><th>姓名</th><th>院區</th><th>職稱</th><th>職類</th>
+                <th>到職日</th><th>年資</th><th>行動電話</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="listBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- 員工詳細資料 Modal -->
+<div class="modal-mask" id="detailMask">
+  <div class="modal">
+    <h3 id="detailTitle">員工詳細資料</h3>
+    <div id="detailBody"></div>
+    <div class="btn-row">
+      <button class="btn danger" onclick="deleteEmp()">刪除</button>
+      <button class="btn secondary" onclick="editEmp()">修改</button>
+      <button class="btn secondary" onclick="closeModal()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================================================
+// 設定區
+// ==================================================
+var API = 'https://script.google.com/macros/s/AKfycbx4se-04-EqKV8uQboilZmWPvIKFNgTfPvslwxXt8WznU-7OPYmNhkYomEGy7zJxSxi/exec';  // Web App URL
+
+// ==================================================
+// 全域狀態
+// ==================================================
+var CURRENT_USER = null;
+var LISTS = { clinics:[], positions:[], jobTypes:[], educations:[], gradStatus:[], relations:[] };
+var _listRecs = [];
+var _currentDetail = null;
+var _editMode = false;
+var _pendingFiles = {};   // { passbook: {url, viewUrl}, idFront:..., idBack:... }
+
+// ==================================================
+// 工具：GET / POST
+// ==================================================
+function showLoading(on) {
+  document.getElementById('loading').classList.toggle('active', !!on);
+}
+function toast(msg, kind) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + (kind === 'err' ? 'err' : 'ok');
+  setTimeout(function(){ el.className = ''; }, 2800);
+}
+
+function apiGet(params, cb) {
+  showLoading(true);
+  var q = Object.keys(params).map(function(k){
+    return encodeURIComponent(k)+'='+encodeURIComponent(params[k]==null?'':params[k]);
+  }).join('&');
+  fetch(API + '?' + q)
+    .then(function(r){ return r.json(); })
+    .then(function(data){ showLoading(false); cb(data); })
+    .catch(function(err){ showLoading(false); toast('網路錯誤: '+err.message,'err'); cb({error:String(err)}); });
+}
+
+function apiPost(params, cb) {
+  showLoading(true);
+  fetch(API, {
+    method: 'POST',
+    headers: {'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(params)
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){ showLoading(false); cb(data); })
+  .catch(function(err){ showLoading(false); toast('上傳失敗: '+err.message,'err'); cb({error:String(err)}); });
+}
+
+// ==================================================
+// Session 管理
+// ==================================================
+function saveSession(u) {
+  CURRENT_USER = u;
+  try { sessionStorage.setItem('ec_user', JSON.stringify(u)); } catch(e){}
+}
+function loadSession() {
+  try {
+    var raw = sessionStorage.getItem('ec_user');
+    if (raw) CURRENT_USER = JSON.parse(raw);
+  } catch(e) {}
+  return CURRENT_USER;
+}
+function clearSession() {
+  CURRENT_USER = null;
+  try { sessionStorage.removeItem('ec_user'); } catch(e){}
+}
+
+// ==================================================
+// 登入 / 登出
+// ==================================================
+function doLogin() {
+  var user = document.getElementById('loginUser').value.trim();
+  var pwd  = document.getElementById('loginPwd').value.trim();
+  if (!user || !pwd) { toast('請輸入帳號密碼','err'); return; }
+  apiGet({action:'login', user:user, password:pwd}, function(r){
+    if (r.error) { toast(r.error, 'err'); return; }
+    saveSession(r);
+    enterMain();
+  });
+}
+function logout() {
+  clearSession();
+  showView('login');
+}
+function enterMain() {
+  document.getElementById('userLabel').textContent =
+    (CURRENT_USER.name||'') + '（' + (CURRENT_USER.role||'') + '｜' + (CURRENT_USER.clinic||'') + '）';
+  showView('main');
+  loadLists(function(){
+    showTab('form');
+  });
+}
+
+function showView(name) {
+  document.getElementById('viewLogin').classList.toggle('active', name==='login');
+  document.getElementById('viewMain').classList.toggle('active',  name==='main');
+}
+function showTab(name) {
+  document.getElementById('navForm').classList.toggle('active', name==='form');
+  document.getElementById('navList').classList.toggle('active', name==='list');
+  document.getElementById('tabForm').classList.toggle('active',  name==='form');
+  document.getElementById('tabList').classList.toggle('active',  name==='list');
+  if (name === 'list') doQuery();
+  if (name === 'form' && !document.getElementById('f_empNo').value) fetchNextEmpNo();
+}
+
+// ==================================================
+// 載入清單
+// ==================================================
+function loadLists(cb) {
+  apiGet({action:'getLists'}, function(r){
+    if (r.error) { toast('清單載入失敗: '+r.error,'err'); return; }
+    LISTS = r;
+    fillSelects();
+    if (cb) cb();
+  });
+}
+function fillSelects() {
+  fillSel('f_clinic',     LISTS.clinics,    false);
+  fillSel('f_position',   LISTS.positions,  true);
+  fillSel('f_jobType',    LISTS.jobTypes,   true);
+  fillSel('f_education',  LISTS.educations, true);
+  fillSel('f_gradStatus', LISTS.gradStatus, true);
+  fillSel('f_emgRelation',LISTS.relations,  true);
+  fillSel('f_depRelation',LISTS.relations,  true);
+
+  fillSel('q_clinic',  LISTS.clinics,   true, '全部');
+  fillSel('q_position',LISTS.positions, true, '全部');
+  fillSel('q_jobType', LISTS.jobTypes,  true, '全部');
+}
+function fillSel(id, arr, includeEmpty, emptyLabel) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var html = '';
+  if (includeEmpty) html += '<option value="">' + (emptyLabel||'') + '</option>';
+  (arr||[]).forEach(function(v){
+    html += '<option value="'+escapeHtml(v)+'">'+escapeHtml(v)+'</option>';
+  });
+  el.innerHTML = html;
+}
+
+// ==================================================
+// 員工編號自動產生
+// ==================================================
+function fetchNextEmpNo() {
+  apiGet({action:'nextEmpNo'}, function(r){
+    if (r.empNo && !document.getElementById('f_empNo').value) {
+      document.getElementById('f_empNo').value = r.empNo;
+    }
+  });
+}
+
+// ==================================================
+// 計算年資
+// ==================================================
+function updateTenure() {
+  var d = document.getElementById('f_hireDate').value;
+  if (!d) { document.getElementById('f_tenure').value = ''; return; }
+  var hire = new Date(d);
+  var now = new Date();
+  var years  = now.getFullYear() - hire.getFullYear();
+  var months = now.getMonth()    - hire.getMonth();
+  var days   = now.getDate()     - hire.getDate();
+  if (days < 0) months--;
+  if (months < 0) { years--; months += 12; }
+  if (years < 0) { document.getElementById('f_tenure').value = ''; return; }
+  document.getElementById('f_tenure').value = years + '年' + months + '個月';
+}
+
+// ==================================================
+// 檔案上傳
+// ==================================================
+// 上傳區塊 HTML 產生器（永遠包含 input[type=file]）
+function uploadBoxHtml(field, innerHtml, showRemove) {
+  var input = '<input type="file" id="fu_'+field+'" accept="image/*,.pdf" onchange="onFilePick(event,\''+field+'\')">';
+  var remove = showRemove
+    ? '<button type="button" class="remove-file" onclick="removeFile(event,\''+field+'\')">×</button>'
+    : '';
+  return input + remove + innerHtml;
+}
+var FIELD_LABEL = { passbook:'存摺', idFront:'身分證正面', idBack:'身分證背面' };
+
+function onFilePick(e, field) {
+  var file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) {
+    toast('檔案超過 8MB 限制','err');
+    e.target.value = '';
+    return;
+  }
+  var empNo = document.getElementById('f_empNo').value.trim() || 'TEMP';
+  var box = document.getElementById('up_' + field);
+
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var base64 = ev.target.result;
+    var isImage = (file.type.indexOf('image/') === 0);
+    // 上傳中預覽
+    var previewInner = isImage
+      ? '<img class="preview" src="'+base64+'"><div style="font-size:12px;color:var(--muted);">上傳中...</div>'
+      : '<div class="placeholder">'+escapeHtml(file.name)+' 上傳中...</div>';
+    box.innerHTML = uploadBoxHtml(field, previewInner, true);
+
+    // 傳到後端
+    apiPost({
+      action:'uploadFile',
+      empNo: empNo,
+      field: field,
+      fileName: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      base64: base64
+    }, function(r){
+      if (r.error) {
+        toast('上傳失敗: '+r.error, 'err');
+        removeFile(null, field);
+        return;
+      }
+      _pendingFiles[field] = { url: r.url, viewUrl: r.viewUrl };
+      var linkHtml = '<a href="'+escapeHtml(r.url)+'" target="_blank" onclick="event.stopPropagation()">已上傳 ✓ 檢視</a>';
+      var doneInner = isImage
+        ? '<img class="preview" src="'+base64+'">' + linkHtml
+        : '<div class="placeholder">'+escapeHtml(file.name)+'</div>' + linkHtml;
+      box.innerHTML = uploadBoxHtml(field, doneInner, true);
+      toast('上傳成功','ok');
+    });
+  };
+  reader.readAsDataURL(file);
+}
+function removeFile(e, field) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  delete _pendingFiles[field];
+  var box = document.getElementById('up_'+field);
+  var inner = '<div class="placeholder">點擊上傳 ' + (FIELD_LABEL[field]||'') + '</div>';
+  box.innerHTML = uploadBoxHtml(field, inner, false);
+}
+
+// ==================================================
+// 儲存表單
+// ==================================================
+function collectForm() {
+  var ids = ['empNo','name','clinic','hireDate','position','jobType','birthday','idNo',
+             'tel','mobile','address','emgName','emgRelation','emgPhone',
+             'education','school','gradStatus','bankBranch','bankAccount',
+             'depListName','depName','depRelation','depBirthday','depIdNo'];
+  var data = {};
+  ids.forEach(function(k){
+    var el = document.getElementById('f_' + k);
+    data[k] = el ? el.value.trim() : '';
+  });
+  // 檔案 URL
+  data.passbookUrl = (_pendingFiles.passbook && _pendingFiles.passbook.url) || '';
+  data.idFrontUrl  = (_pendingFiles.idFront  && _pendingFiles.idFront.url)  || '';
+  data.idBackUrl   = (_pendingFiles.idBack   && _pendingFiles.idBack.url)   || '';
+  data._user = CURRENT_USER ? CURRENT_USER.name : '';
+  return data;
+}
+
+function saveForm() {
+  var d = collectForm();
+  if (!d.empNo) { toast('請輸入員工編號','err'); return; }
+  if (!d.name)  { toast('請輸入姓名','err'); return; }
+  if (!d.clinic){ toast('請選擇所屬院區','err'); return; }
+  if (!d.hireDate){ toast('請選擇到職日','err'); return; }
+
+  if (d.idNo && !/^[A-Z][12]\d{8}$/.test(d.idNo)) {
+    if (!confirm('身分證字號格式似乎不正確，仍要儲存嗎？')) return;
+  }
+
+  var btn = document.getElementById('btnSave');
+  btn.disabled = true;
+  btn.textContent = '儲存中...';
+
+  var params = Object.assign({action: _editMode ? 'updateEmployee' : 'saveEmployee'}, d);
+  apiGet(params, function(r){
+    btn.disabled = false;
+    btn.textContent = '儲存員工資料';
+    if (r.error) { toast(r.error,'err'); return; }
+    toast(_editMode ? '修改成功' : '新增成功 ('+(r.empNo||d.empNo)+')', 'ok');
+    resetForm();
+    _editMode = false;
+  });
+}
+
+function resetForm() {
+  ['empNo','name','hireDate','tenure','birthday','idNo','tel','mobile','address',
+   'emgName','emgPhone','school','bankBranch','bankAccount',
+   'depListName','depName','depBirthday','depIdNo'].forEach(function(k){
+    var el = document.getElementById('f_'+k);
+    if (el) el.value = '';
+  });
+  ['clinic','position','jobType','emgRelation','education','gradStatus','depRelation'].forEach(function(k){
+    var el = document.getElementById('f_'+k);
+    if (el) el.selectedIndex = 0;
+  });
+  _pendingFiles = {};
+  ['passbook','idFront','idBack'].forEach(function(f){ removeFile(null, f); });
+  _editMode = false;
+  fetchNextEmpNo();
+}
+
+// ==================================================
+// 查詢列表
+// ==================================================
+function doQuery() {
+  var q = {
+    action:  'listEmployees',
+    clinic:  document.getElementById('q_clinic').value,
+    jobType: document.getElementById('q_jobType').value,
+    position:document.getElementById('q_position').value,
+    keyword: document.getElementById('q_keyword').value,
+    hireFrom:document.getElementById('q_from').value,
+    hireTo:  document.getElementById('q_to').value
+  };
+  apiGet(q, function(r){
+    if (r.error) { toast(r.error,'err'); return; }
+    _listRecs = r.records || [];
+    renderList();
+  });
+}
+function renderList() {
+  document.getElementById('listCount').textContent = _listRecs.length;
+  var body = document.getElementById('listBody');
+  if (_listRecs.length === 0) {
+    body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">無符合資料</td></tr>';
+    return;
+  }
+  var html = '';
+  _listRecs.forEach(function(r, idx){
+    html += '<tr>' +
+      '<td>'+escapeHtml(r.empNo)+'</td>' +
+      '<td>'+escapeHtml(r.name)+'</td>' +
+      '<td>'+escapeHtml(r.clinic)+'</td>' +
+      '<td>'+escapeHtml(r.position)+'</td>' +
+      '<td>'+escapeHtml(r.jobType)+'</td>' +
+      '<td>'+escapeHtml(r.hireDate)+'</td>' +
+      '<td>'+escapeHtml(r.tenure)+'</td>' +
+      '<td>'+escapeHtml(r.mobile)+'</td>' +
+      '<td><button class="btn sm" onclick="showDetail('+idx+')">詳細</button></td>' +
+      '</tr>';
+  });
+  body.innerHTML = html;
+}
+function resetFilter() {
+  ['q_keyword','q_from','q_to'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['q_clinic','q_position','q_jobType'].forEach(function(id){ document.getElementById(id).selectedIndex=0; });
+  doQuery();
+}
+
+// ==================================================
+// 詳細 Modal
+// ==================================================
+function showDetail(idx) {
+  var r = _listRecs[idx];
+  if (!r) return;
+  _currentDetail = r;
+  document.getElementById('detailTitle').textContent = '員工詳細資料：' + r.name + ' (' + r.empNo + ')';
+  document.getElementById('detailBody').innerHTML = buildDetailHtml(r);
+  document.getElementById('detailMask').classList.add('show');
+}
+function buildDetailHtml(r) {
+  function row(label, val) {
+    return '<div class="field"><label>'+label+'</label><div style="padding:6px 0;">'+escapeHtml(val||'—')+'</div></div>';
+  }
+  function fileRow(label, url) {
+    if (!url) return row(label, '');
+    return '<div class="field"><label>'+label+'</label>' +
+      '<div style="padding:6px 0;"><a href="'+escapeHtml(url)+'" target="_blank">檢視檔案 ↗</a></div></div>';
+  }
+  return '<div class="form-grid cols-4">' +
+    row('員工編號', r.empNo) + row('姓名', r.name) + row('院區', r.clinic) + row('到職日', r.hireDate) +
+    row('年資', r.tenure) + row('職稱', r.position) + row('職類', r.jobType) + row('出生', r.birthday) +
+    row('身分證', r.idNo) + row('電話', r.tel) + row('行動', r.mobile) +
+    '<div class="field" style="grid-column:span 1;"><label>地址</label><div style="padding:6px 0;">'+escapeHtml(r.address||'—')+'</div></div>' +
+    row('緊急聯絡人', r.emgName) + row('關係', r.emgRelation) + row('電話', r.emgPhone) + row('', '') +
+    row('學歷', r.education) + row('學校', r.school) + row('畢/肄', r.gradStatus) + row('', '') +
+    row('薪轉分行', r.bankBranch) + row('薪轉帳號', r.bankAccount) + row('', '') + row('', '') +
+    fileRow('存摺', r.passbookUrl) + fileRow('身分證正面', r.idFrontUrl) + fileRow('身分證背面', r.idBackUrl) + row('', '') +
+    row('眷屬概述', r.depListName) + row('眷屬姓名', r.depName) + row('關係', r.depRelation) + row('出生', r.depBirthday) +
+    row('眷屬身分證', r.depIdNo) + row('建立者', r.creator) + row('建立時間', r.createTime) + row('修改', (r.modifier||'')+' '+(r.modifyTime||'')) +
+  '</div>';
+}
+function closeModal() {
+  document.getElementById('detailMask').classList.remove('show');
+  _currentDetail = null;
+}
+function editEmp() {
+  if (!_currentDetail) return;
+  var r = _currentDetail;
+  // 填回表單
+  showTab('form');
+  closeModal();
+  _editMode = true;
+  var map = {
+    empNo:r.empNo,name:r.name,clinic:r.clinic,hireDate:r.hireDate,position:r.position,
+    jobType:r.jobType,birthday:r.birthday,idNo:r.idNo,tel:r.tel,mobile:r.mobile,
+    address:r.address,emgName:r.emgName,emgRelation:r.emgRelation,emgPhone:r.emgPhone,
+    education:r.education,school:r.school,gradStatus:r.gradStatus,
+    bankBranch:r.bankBranch,bankAccount:r.bankAccount,
+    depListName:r.depListName,depName:r.depName,depRelation:r.depRelation,
+    depBirthday:r.depBirthday,depIdNo:r.depIdNo
+  };
+  Object.keys(map).forEach(function(k){
+    var el = document.getElementById('f_'+k);
+    if (el) el.value = map[k] || '';
+  });
+  updateTenure();
+  // 檔案預覽
+  ['passbook','idFront','idBack'].forEach(function(f){
+    var url = (f==='passbook')? r.passbookUrl : (f==='idFront'? r.idFrontUrl : r.idBackUrl);
+    if (url) {
+      _pendingFiles[f] = { url: url };
+      var box = document.getElementById('up_'+f);
+      var inner = '<div class="placeholder">已有檔案（點此可更換）</div>' +
+        '<a href="'+escapeHtml(url)+'" target="_blank" onclick="event.stopPropagation()">檢視 ↗</a>';
+      box.innerHTML = uploadBoxHtml(f, inner, true);
+    } else {
+      removeFile(null, f);
+    }
+  });
+  toast('已載入資料，可進行修改','ok');
+}
+function deleteEmp() {
+  if (!_currentDetail) return;
+  var r = _currentDetail;
+  if (!confirm('確認刪除員工「'+r.name+' ('+r.empNo+')」？此動作無法復原。')) return;
+  apiGet({action:'deleteEmployee', empNo:r.empNo}, function(resp){
+    if (resp.error) { toast(resp.error,'err'); return; }
+    toast('已刪除','ok');
+    closeModal();
+    doQuery();
+  });
+}
+
+// ==================================================
+// CSV 匯出
+// ==================================================
+function exportCsv() {
+  if (_listRecs.length === 0) { toast('無資料可匯出','err'); return; }
+  var headers = ['員工編號','姓名','院區','到職日','年資','職稱','職類','出生','身分證',
+                 '電話','行動','地址','緊急聯絡人','關係','緊急電話',
+                 '學歷','學校','畢/肄','薪轉分行','薪轉帳號',
+                 '存摺','身分證正面','身分證背面',
+                 '眷屬概述','眷屬姓名','眷屬關係','眷屬出生','眷屬身分證'];
+  var rows = [headers];
+  _listRecs.forEach(function(r){
+    rows.push([r.empNo,r.name,r.clinic,r.hireDate,r.tenure,r.position,r.jobType,r.birthday,r.idNo,
+      r.tel,r.mobile,r.address,r.emgName,r.emgRelation,r.emgPhone,
+      r.education,r.school,r.gradStatus,r.bankBranch,r.bankAccount,
+      r.passbookUrl,r.idFrontUrl,r.idBackUrl,
+      r.depListName,r.depName,r.depRelation,r.depBirthday,r.depIdNo]);
+  });
+  var csv = rows.map(function(row){
+    return row.map(function(v){
+      v = String(v==null?'':v);
+      if (v.indexOf(',')>=0 || v.indexOf('"')>=0 || v.indexOf('\n')>=0) {
+        v = '"' + v.replace(/"/g,'""') + '"';
+      }
+      return v;
+    }).join(',');
+  }).join('\n');
+  // BOM 給 Excel 正確識別 UTF-8
+  var blob = new Blob([String.fromCharCode(0xFEFF) + csv], {type:'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '員工資料_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ==================================================
+// 輔助
+// ==================================================
+function escapeHtml(s) {
+  return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ==================================================
+// 啟動
+// ==================================================
+window.addEventListener('DOMContentLoaded', function(){
+  if (API === 'YOUR_APPS_SCRIPT_DEPLOY_URL_HERE') {
+    document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#c0392b;font-size:16px;">' +
+      '⚠️ 請先將 index.html 裡的 <code>API</code> 變數替換為 Apps Script Web App 部署網址。' +
+      '</div>';
+    return;
+  }
+  var u = loadSession();
+  if (u) enterMain();
+  else showView('login');
+
+  // Enter 鍵登入
+  ['loginUser','loginPwd'].forEach(function(id){
+    document.getElementById(id).addEventListener('keydown', function(e){
+      if (e.key === 'Enter') doLogin();
+    });
+  });
+});
+</script>
+</body>
+</html>
