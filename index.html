@@ -237,6 +237,34 @@
   }
   tbody tr:hover { background: var(--tl); }
 
+  /* 眷屬子區塊 */
+  .dep-row {
+    background: #fdfbf5;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-top: 12px;
+    position: relative;
+  }
+  .dep-row .dep-title {
+    font-size: 13px;
+    color: var(--primary-dark);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .dep-row .dep-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--err);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+
   /* 在職狀態切換鈕 */
   .switch {
     position: relative;
@@ -539,29 +567,17 @@
       </div>
 
       <div class="card">
-        <h2>健保眷屬</h2>
+        <h2>
+          健保眷屬
+          <button type="button" class="btn sm secondary" style="float:right;" onclick="addDependent()">+ 新增眷屬</button>
+        </h2>
         <div class="form-grid">
           <div class="field full">
             <label>眷屬概述 (自由填寫，例：配偶王小美、子王小強)</label>
             <input id="f_depListName" type="text">
           </div>
-          <div class="field">
-            <label>主要眷屬姓名</label>
-            <input id="f_depName" type="text">
-          </div>
-          <div class="field">
-            <label>關係</label>
-            <select id="f_depRelation"></select>
-          </div>
-          <div class="field">
-            <label>出生年月日</label>
-            <input id="f_depBirthday" type="date">
-          </div>
-          <div class="field full">
-            <label>身分證字號</label>
-            <input id="f_depIdNo" type="text" maxlength="10">
-          </div>
         </div>
+        <div id="depContainer"></div>
       </div>
 
       <div class="btn-row">
@@ -663,6 +679,8 @@ var _listRecs = [];
 var _currentDetail = null;
 var _editMode = false;
 var _pendingFiles = {};   // { passbook: {url, viewUrl}, idFront:..., idBack:... }
+var _dependents = [{ name:'', relation:'', birthday:'', idNo:'' }];   // 眷屬陣列（最多 5）
+var MAX_DEPENDENTS = 5;
 
 // ==================================================
 // 工具：GET / POST
@@ -776,11 +794,64 @@ function fillSelects() {
   fillSel('f_education',  LISTS.educations, true);
   fillSel('f_gradStatus', LISTS.gradStatus, true);
   fillSel('f_emgRelation',LISTS.relations,  true);
-  fillSel('f_depRelation',LISTS.relations,  true);
 
   fillSel('q_clinic',  LISTS.clinics,   true, '全部');
   fillSel('q_position',LISTS.positions, true, '全部');
   fillSel('q_jobType', LISTS.jobTypes,  true, '全部');
+
+  renderDependents();
+}
+
+// ===== 健保眷屬動態渲染 =====
+function renderDependents() {
+  var box = document.getElementById('depContainer');
+  if (!box) return;
+  if (!_dependents || _dependents.length === 0) {
+    _dependents = [{ name:'', relation:'', birthday:'', idNo:'' }];
+  }
+  var rels = LISTS.relations || [];
+  var html = '';
+  _dependents.forEach(function(d, idx){
+    var num = idx + 1;
+    var relOpts = '<option value="">請選擇</option>' + rels.map(function(rel){
+      var sel = (d.relation === rel) ? ' selected' : '';
+      return '<option value="'+escapeHtml(rel)+'"'+sel+'>'+escapeHtml(rel)+'</option>';
+    }).join('');
+    var removeBtn = (_dependents.length > 1)
+      ? '<button type="button" class="dep-remove" onclick="removeDependent('+idx+')">移除</button>'
+      : '';
+    html += '<div class="dep-row">' +
+      '<div class="dep-title">眷屬 ' + num + '</div>' + removeBtn +
+      '<div class="form-grid">' +
+        '<div class="field"><label>姓名</label>' +
+          '<input type="text" value="'+escapeHtml(d.name)+'" oninput="updateDep('+idx+',\'name\',this.value)"></div>' +
+        '<div class="field"><label>關係</label>' +
+          '<select onchange="updateDep('+idx+',\'relation\',this.value)">'+relOpts+'</select></div>' +
+        '<div class="field"><label>出生年月日</label>' +
+          '<input type="date" value="'+escapeHtml(d.birthday)+'" oninput="updateDep('+idx+',\'birthday\',this.value)"></div>' +
+        '<div class="field"><label>身分證字號</label>' +
+          '<input type="text" maxlength="10" value="'+escapeHtml(d.idNo)+'" oninput="updateDep('+idx+',\'idNo\',this.value)"></div>' +
+      '</div>' +
+    '</div>';
+  });
+  box.innerHTML = html;
+}
+function updateDep(idx, field, val) {
+  if (!_dependents[idx]) _dependents[idx] = {};
+  _dependents[idx][field] = val;
+}
+function addDependent() {
+  if (_dependents.length >= MAX_DEPENDENTS) {
+    toast('最多 '+MAX_DEPENDENTS+' 位眷屬', 'err');
+    return;
+  }
+  _dependents.push({ name:'', relation:'', birthday:'', idNo:'' });
+  renderDependents();
+}
+function removeDependent(idx) {
+  _dependents.splice(idx, 1);
+  if (_dependents.length === 0) _dependents.push({ name:'', relation:'', birthday:'', idNo:'' });
+  renderDependents();
 }
 function fillSel(id, arr, includeEmpty, emptyLabel) {
   var el = document.getElementById(id);
@@ -894,12 +965,21 @@ function removeFile(e, field) {
 function collectForm() {
   var ids = ['empNo','name','clinic','hireDate','position','jobType','birthday','idNo',
              'tel','mobile','email','address','referrer','emgName','emgRelation','emgPhone',
-             'education','school','gradStatus','bankBranch','bankAccount',
-             'depListName','depName','depRelation','depBirthday','depIdNo'];
+             'education','school','gradStatus','bankBranch','bankAccount','depListName'];
   var data = {};
   ids.forEach(function(k){
     var el = document.getElementById('f_' + k);
     data[k] = el ? el.value.trim() : '';
+  });
+  // 眷屬資料：dep1 → depName/depRelation/depBirthday/depIdNo（保留舊命名）
+  // 眷屬 2~5 → dep2Name / dep3Name / ... 等
+  [0,1,2,3,4].forEach(function(i){
+    var prefix = (i === 0) ? 'dep' : ('dep' + (i+1));
+    var d = _dependents[i] || {};
+    data[prefix+'Name']     = (d.name     || '').trim();
+    data[prefix+'Relation'] = (d.relation || '').trim();
+    data[prefix+'Birthday'] = (d.birthday || '').trim();
+    data[prefix+'IdNo']     = (d.idNo     || '').trim();
   });
   // 檔案 URL
   data.passbookUrl = (_pendingFiles.passbook && _pendingFiles.passbook.url) || '';
@@ -938,16 +1018,18 @@ function saveForm() {
 function resetForm() {
   ['empNo','name','hireDate','tenure','birthday','idNo','tel','mobile','email','address',
    'referrer','emgName','emgPhone','school','bankBranch','bankAccount',
-   'depListName','depName','depBirthday','depIdNo'].forEach(function(k){
+   'depListName'].forEach(function(k){
     var el = document.getElementById('f_'+k);
     if (el) el.value = '';
   });
-  ['clinic','position','jobType','emgRelation','education','gradStatus','depRelation'].forEach(function(k){
+  ['clinic','position','jobType','emgRelation','education','gradStatus'].forEach(function(k){
     var el = document.getElementById('f_'+k);
     if (el) el.selectedIndex = 0;
   });
   _pendingFiles = {};
   ['passbook','idFront','idBack'].forEach(function(f){ removeFile(null, f); });
+  _dependents = [{ name:'', relation:'', birthday:'', idNo:'' }];
+  renderDependents();
   _editMode = false;
   fetchNextEmpNo();
 }
@@ -1101,9 +1183,28 @@ function buildDetailHtml(r) {
     row('學歷', r.education) + row('學校', r.school) + row('畢/肄', r.gradStatus) + row('', '') +
     row('薪轉分行', r.bankBranch) + row('薪轉帳號', r.bankAccount) + row('', '') + row('', '') +
     fileRow('存摺', r.passbookUrl) + fileRow('身分證正面', r.idFrontUrl) + fileRow('身分證背面', r.idBackUrl) + row('', '') +
-    row('眷屬概述', r.depListName) + row('眷屬姓名', r.depName) + row('關係', r.depRelation) + row('出生', fmtDateShort(r.depBirthday)) +
-    row('眷屬身分證', r.depIdNo) + row('建立者', r.creator) + row('建立時間', fmtDateTimeShort(r.createTime)) + row('修改', (r.modifier||'')+' '+fmtDateTimeShort(r.modifyTime)) +
+    row('眷屬概述', r.depListName) + row('','') + row('','') + row('','') +
+    buildDepsHtml(r.dependents) +
+    '<div class="form-grid cols-4" style="grid-column:1/-1;">' +
+      row('建立者', r.creator) + row('建立時間', fmtDateTimeShort(r.createTime)) +
+      row('修改者', r.modifier) + row('修改時間', fmtDateTimeShort(r.modifyTime)) +
+    '</div>' +
   '</div>';
+}
+function buildDepsHtml(deps) {
+  if (!deps || deps.length === 0) return '';
+  var html = '';
+  deps.forEach(function(d, i){
+    html += '<div class="field full" style="border-top:1px dashed var(--border);padding-top:6px;margin-top:4px;">' +
+      '<label>眷屬 ' + (i+1) + '</label>' +
+      '<div style="padding:4px 0;">' +
+        escapeHtml(d.name||'—') + ' / ' +
+        escapeHtml(d.relation||'—') + ' / ' +
+        escapeHtml(fmtDateShort(d.birthday)||'—') + ' / ' +
+        escapeHtml(d.idNo||'—') +
+      '</div></div>';
+  });
+  return html;
 }
 function closeModal() {
   document.getElementById('detailMask').classList.remove('show');
@@ -1122,13 +1223,21 @@ function editEmp() {
     address:r.address,referrer:r.referrer,emgName:r.emgName,emgRelation:r.emgRelation,emgPhone:r.emgPhone,
     education:r.education,school:r.school,gradStatus:r.gradStatus,
     bankBranch:r.bankBranch,bankAccount:r.bankAccount,
-    depListName:r.depListName,depName:r.depName,depRelation:r.depRelation,
-    depBirthday:fmtDateShort(r.depBirthday),depIdNo:r.depIdNo
+    depListName:r.depListName
   };
   Object.keys(map).forEach(function(k){
     var el = document.getElementById('f_'+k);
     if (el) el.value = map[k] || '';
   });
+  // 眷屬陣列
+  if (r.dependents && r.dependents.length > 0) {
+    _dependents = r.dependents.map(function(d){
+      return { name:d.name||'', relation:d.relation||'', birthday:fmtDateShort(d.birthday), idNo:d.idNo||'' };
+    });
+  } else {
+    _dependents = [{ name:'', relation:'', birthday:'', idNo:'' }];
+  }
+  renderDependents();
   updateTenure();
   // 檔案預覽
   ['passbook','idFront','idBack'].forEach(function(f){
@@ -1166,15 +1275,19 @@ function exportCsv() {
                  '電話','行動','Email','地址','推介人','緊急聯絡人','關係','緊急電話',
                  '學歷','學校','畢/肄','薪轉分行','薪轉帳號',
                  '存摺','身分證正面','身分證背面',
-                 '眷屬概述','眷屬姓名','眷屬關係','眷屬出生','眷屬身分證',
+                 '眷屬概述','眷屬人數','眷屬列表',
                  '在職狀態','離職日'];
   var rows = [headers];
   _listRecs.forEach(function(r){
+    var deps = r.dependents || [];
+    var depStr = deps.map(function(d){
+      return (d.name||'') + '|' + (d.relation||'') + '|' + (fmtDateShort(d.birthday)||'') + '|' + (d.idNo||'');
+    }).join('；');
     rows.push([r.empNo,r.name,r.clinic,r.hireDate,r.tenure,r.position,r.jobType,r.birthday,r.idNo,
       r.tel,r.mobile,r.email,r.address,r.referrer,r.emgName,r.emgRelation,r.emgPhone,
       r.education,r.school,r.gradStatus,r.bankBranch,r.bankAccount,
       r.passbookUrl,r.idFrontUrl,r.idBackUrl,
-      r.depListName,r.depName,r.depRelation,r.depBirthday,r.depIdNo,
+      r.depListName, deps.length, depStr,
       r.status,r.leaveDate]);
   });
   var csv = rows.map(function(row){
