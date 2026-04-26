@@ -623,6 +623,14 @@
             <label>姓名 / 員工編號</label>
             <input id="q_keyword" type="text" placeholder="模糊搜尋">
           </div>
+          <div class="field">
+            <label>在職期間 起</label>
+            <input id="q_periodFrom" type="date" title="員工在這段期間內有重疊在職">
+          </div>
+          <div class="field">
+            <label>在職期間 訖</label>
+            <input id="q_periodTo" type="date" title="員工在這段期間內有重疊在職">
+          </div>
         </div>
         <div class="btn-row">
           <button class="btn secondary" onclick="resetFilter()">重設</button>
@@ -1039,14 +1047,16 @@ function resetForm() {
 // ==================================================
 function doQuery() {
   var q = {
-    action:  'listEmployees',
-    clinic:  document.getElementById('q_clinic').value,
-    jobType: document.getElementById('q_jobType').value,
-    position:document.getElementById('q_position').value,
-    status:  document.getElementById('q_status').value,
-    keyword: document.getElementById('q_keyword').value,
-    hireFrom:document.getElementById('q_from').value,
-    hireTo:  document.getElementById('q_to').value
+    action:    'listEmployees',
+    clinic:    document.getElementById('q_clinic').value,
+    jobType:   document.getElementById('q_jobType').value,
+    position:  document.getElementById('q_position').value,
+    status:    document.getElementById('q_status').value,
+    keyword:   document.getElementById('q_keyword').value,
+    hireFrom:  document.getElementById('q_from').value,
+    hireTo:    document.getElementById('q_to').value,
+    periodFrom:document.getElementById('q_periodFrom').value,
+    periodTo:  document.getElementById('q_periodTo').value
   };
   apiGet(q, function(r){
     if (r.error) { toast(r.error,'err'); return; }
@@ -1098,15 +1108,37 @@ function updateStatsBar() {
   var total = _listRecs.length;
   var active = 0, left = 0;
   _listRecs.forEach(function(r){ if (r.status === '離職') left++; else active++; });
+
+  // 整體離職率 (對所有篩選結果)
   var rate = total>0 ? (left/total*100).toFixed(1) + '%' : '0%';
+
+  // 期間離職率 - 只算離職日落在期間內的
+  var pf = document.getElementById('q_periodFrom').value;
+  var pt = document.getElementById('q_periodTo').value;
+  var periodHtml = '';
+  if (pf || pt) {
+    var leftInPeriod = 0;
+    _listRecs.forEach(function(r){
+      if (r.status !== '離職' || !r.leaveDate) return;
+      if (pf && r.leaveDate < pf) return;
+      if (pt && r.leaveDate > pt) return;
+      leftInPeriod++;
+    });
+    var periodRate = total>0 ? (leftInPeriod/total*100).toFixed(1) + '%' : '0%';
+    periodHtml =
+      ' ｜ <span style="color:var(--primary-dark);">期間 ' +
+      escapeHtml(pf||'…') + ' ~ ' + escapeHtml(pt||'…') + '</span> ・ ' +
+      '<span class="status-left">期間離職 '+leftInPeriod+'</span> ・ ' +
+      '期間離職率 <b>'+periodRate+'</b>';
+  }
   document.getElementById('statsBar').innerHTML =
     '總數 <b>'+total+'</b> ・ ' +
     '<span class="status-active">在職 '+active+'</span> ・ ' +
     '<span class="status-left">離職 '+left+'</span> ・ ' +
-    '離職率 <b>'+rate+'</b>';
+    '離職率 <b>'+rate+'</b>' + periodHtml;
 }
 function resetFilter() {
-  ['q_keyword','q_from','q_to'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['q_keyword','q_from','q_to','q_periodFrom','q_periodTo'].forEach(function(id){ document.getElementById(id).value=''; });
   ['q_clinic','q_position','q_jobType','q_status'].forEach(function(id){ document.getElementById(id).selectedIndex=0; });
   doQuery();
 }
