@@ -689,6 +689,7 @@ var _editMode = false;
 var _pendingFiles = {};   // { passbook: {url, viewUrl}, idFront:..., idBack:... }
 var _dependents = [{ name:'', relation:'', birthday:'', idNo:'' }];   // 眷屬陣列（最多 5）
 var MAX_DEPENDENTS = 5;
+var _originalEmpNo = '';   // 進入修改模式時記下原始員工編號（用來定位列）
 
 // ==================================================
 // 工具：GET / POST
@@ -1012,6 +1013,7 @@ function saveForm() {
   btn.textContent = '儲存中...';
 
   var params = Object.assign({action: _editMode ? 'updateEmployee' : 'saveEmployee'}, d);
+  if (_editMode) params.originalEmpNo = _originalEmpNo;   // 用原始編號定位列
   apiGet(params, function(r){
     btn.disabled = false;
     btn.textContent = '儲存員工資料';
@@ -1019,6 +1021,7 @@ function saveForm() {
     toast(_editMode ? '修改成功' : '新增成功 ('+(r.empNo||d.empNo)+')', 'ok');
     resetForm();
     _editMode = false;
+    _originalEmpNo = '';
   });
 }
 
@@ -1038,6 +1041,7 @@ function resetForm() {
   _dependents = [{ name:'', relation:'', birthday:'', idNo:'' }];
   renderDependents();
   _editMode = false;
+  _originalEmpNo = '';
   fetchNextEmpNo();
 }
 
@@ -1245,6 +1249,7 @@ function editEmp() {
   showTab('form');
   closeModal();
   _editMode = true;
+  _originalEmpNo = r.empNo;   // 記下原始員工編號
   var map = {
     empNo:r.empNo,name:r.name,clinic:r.clinic,hireDate:fmtDateShort(r.hireDate),position:r.position,
     jobType:r.jobType,birthday:fmtDateShort(r.birthday),idNo:r.idNo,tel:r.tel,mobile:r.mobile,email:r.email,
