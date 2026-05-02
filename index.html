@@ -447,6 +447,10 @@
             <input id="f_hireDate" type="date" onchange="updateTenure()">
           </div>
           <div class="field">
+            <label>簽約日期</label>
+            <input id="f_contractDate" type="date">
+          </div>
+          <div class="field">
             <label>計算年資</label>
             <input id="f_tenure" type="text" readonly>
           </div>
@@ -972,7 +976,7 @@ function removeFile(e, field) {
 // 儲存表單
 // ==================================================
 function collectForm() {
-  var ids = ['empNo','name','clinic','hireDate','position','jobType','birthday','idNo',
+  var ids = ['empNo','name','clinic','hireDate','contractDate','position','jobType','birthday','idNo',
              'tel','mobile','email','address','referrer','emgName','emgRelation','emgPhone',
              'education','school','gradStatus','bankBranch','bankAccount','depListName'];
   var data = {};
@@ -1026,7 +1030,7 @@ function saveForm() {
 }
 
 function resetForm() {
-  ['empNo','name','hireDate','tenure','birthday','idNo','tel','mobile','email','address',
+  ['empNo','name','hireDate','contractDate','tenure','birthday','idNo','tel','mobile','email','address',
    'referrer','emgName','emgPhone','school','bankBranch','bankAccount',
    'depListName'].forEach(function(k){
     var el = document.getElementById('f_'+k);
@@ -1207,10 +1211,10 @@ function buildDetailHtml(r) {
   }
   return '<div class="form-grid cols-4">' +
     row('員工編號', r.empNo) + row('姓名', r.name) + row('院區', r.clinic) + row('到職日', fmtDateShort(r.hireDate)) +
-    row('年資', r.tenure) + row('職稱', r.position) + row('職類', r.jobType) + row('出生', fmtDateShort(r.birthday)) +
-    row('身分證', r.idNo) + row('電話', r.tel) + row('行動', r.mobile) + row('Email', r.email) +
+    row('簽約日期', fmtDateShort(r.contractDate)) + row('年資', r.tenure) + row('職稱', r.position) + row('職類', r.jobType) +
+    row('出生', fmtDateShort(r.birthday)) + row('身分證', r.idNo) + row('電話', r.tel) + row('行動', r.mobile) +
+    row('Email', r.email) + row('推介人', r.referrer) + row('','') + row('','') +
     '<div class="field full"><label>地址</label><div style="padding:6px 0;">'+escapeHtml(r.address||'—')+'</div></div>' +
-    row('推介人', r.referrer) + row('','') + row('','') + row('','') +
     row('緊急聯絡人', r.emgName) + row('關係', r.emgRelation) + row('電話', r.emgPhone) + row('', '') +
     row('學歷', r.education) + row('學校', r.school) + row('畢/肄', r.gradStatus) + row('', '') +
     row('薪轉分行', r.bankBranch) + row('薪轉帳號', r.bankAccount) + row('', '') + row('', '') +
@@ -1251,7 +1255,8 @@ function editEmp() {
   _editMode = true;
   _originalEmpNo = r.empNo;   // 記下原始員工編號
   var map = {
-    empNo:r.empNo,name:r.name,clinic:r.clinic,hireDate:fmtDateShort(r.hireDate),position:r.position,
+    empNo:r.empNo,name:r.name,clinic:r.clinic,hireDate:fmtDateShort(r.hireDate),
+    contractDate:fmtDateShort(r.contractDate),position:r.position,
     jobType:r.jobType,birthday:fmtDateShort(r.birthday),idNo:r.idNo,tel:r.tel,mobile:r.mobile,email:r.email,
     address:r.address,referrer:r.referrer,emgName:r.emgName,emgRelation:r.emgRelation,emgPhone:r.emgPhone,
     education:r.education,school:r.school,gradStatus:r.gradStatus,
@@ -1304,7 +1309,7 @@ function deleteEmp() {
 // ==================================================
 function exportCsv() {
   if (_listRecs.length === 0) { toast('無資料可匯出','err'); return; }
-  var headers = ['員工編號','姓名','院區','到職日','年資','職稱','職類','出生','身分證',
+  var headers = ['員工編號','姓名','院區','到職日','簽約日期','年資','職稱','職類','出生','身分證',
                  '電話','行動','Email','地址','推介人','緊急聯絡人','關係','緊急電話',
                  '學歷','學校','畢/肄','薪轉分行','薪轉帳號',
                  '存摺','身分證正面','身分證背面',
@@ -1316,7 +1321,7 @@ function exportCsv() {
     var depStr = deps.map(function(d){
       return (d.name||'') + '|' + (d.relation||'') + '|' + (fmtDateShort(d.birthday)||'') + '|' + (d.idNo||'');
     }).join('；');
-    rows.push([r.empNo,r.name,r.clinic,r.hireDate,r.tenure,r.position,r.jobType,r.birthday,r.idNo,
+    rows.push([r.empNo,r.name,r.clinic,r.hireDate,r.contractDate,r.tenure,r.position,r.jobType,r.birthday,r.idNo,
       r.tel,r.mobile,r.email,r.address,r.referrer,r.emgName,r.emgRelation,r.emgPhone,
       r.education,r.school,r.gradStatus,r.bankBranch,r.bankAccount,
       r.passbookUrl,r.idFrontUrl,r.idBackUrl,
