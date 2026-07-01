@@ -494,19 +494,13 @@
       </div>
 
       <div class="card">
-        <h2>留職停薪期間</h2>
-        <div class="form-grid cols-2">
-          <div class="field">
-            <label>起始日</label>
-            <input id="f_lwpStart" type="date" onchange="updateTenure()">
-          </div>
-          <div class="field">
-            <label>結束日</label>
-            <input id="f_lwpEnd" type="date" onchange="updateTenure()">
-          </div>
-        </div>
+        <h2>
+          留職停薪期間
+          <button type="button" class="btn sm secondary" style="float:right;" onclick="addLwp()">+ 新增段落</button>
+        </h2>
+        <div id="lwpContainer"></div>
         <div style="font-size:12px;color:var(--muted);margin-top:6px;">
-          填寫起訖日後，年資會自動扣除此期間天數
+          可分多段紀錄，年資會自動扣除全部段落的總天數
         </div>
       </div>
 
@@ -710,6 +704,8 @@ var _editMode = false;
 var _pendingFiles = {};   // { passbook: {url, viewUrl}, idFront:..., idBack:... }
 var _dependents = [{ name:'', relation:'', birthday:'', idNo:'' }];   // 眷屬陣列（最多 5）
 var MAX_DEPENDENTS = 5;
+var _lwpPeriods = [{ start:'', end:'' }];   // 留職停薪陣列（最多 5 段）
+var MAX_LWP = 5;
 var _originalEmpNo = '';   // 進入修改模式時記下原始員工編號（用來定位列）
 
 // ==================================================
@@ -830,6 +826,53 @@ function fillSelects() {
   fillSel('q_jobType', LISTS.jobTypes,  true, '全部');
 
   renderDependents();
+  renderLwpPeriods();
+}
+
+// ===== 留職停薪多段動態渲染 =====
+function renderLwpPeriods() {
+  var box = document.getElementById('lwpContainer');
+  if (!box) return;
+  if (!_lwpPeriods || _lwpPeriods.length === 0) {
+    _lwpPeriods = [{ start:'', end:'' }];
+  }
+  var html = '';
+  _lwpPeriods.forEach(function(p, idx){
+    var num = idx + 1;
+    var removeBtn = (_lwpPeriods.length > 1)
+      ? '<button type="button" class="dep-remove" onclick="removeLwp('+idx+')">移除</button>'
+      : '';
+    html += '<div class="dep-row">' +
+      '<div class="dep-title">留職停薪 ' + num + '</div>' + removeBtn +
+      '<div class="form-grid cols-2">' +
+        '<div class="field"><label>起始日</label>' +
+          '<input type="date" value="'+escapeHtml(p.start||'')+'" ' +
+            'oninput="updateLwp('+idx+',\'start\',this.value); updateTenure()"></div>' +
+        '<div class="field"><label>結束日</label>' +
+          '<input type="date" value="'+escapeHtml(p.end||'')+'" ' +
+            'oninput="updateLwp('+idx+',\'end\',this.value); updateTenure()"></div>' +
+      '</div>' +
+    '</div>';
+  });
+  box.innerHTML = html;
+}
+function updateLwp(idx, field, val) {
+  if (!_lwpPeriods[idx]) _lwpPeriods[idx] = {};
+  _lwpPeriods[idx][field] = val;
+}
+function addLwp() {
+  if (_lwpPeriods.length >= MAX_LWP) {
+    toast('最多 '+MAX_LWP+' 段留職停薪', 'err');
+    return;
+  }
+  _lwpPeriods.push({ start:'', end:'' });
+  renderLwpPeriods();
+}
+function removeLwp(idx) {
+  _lwpPeriods.splice(idx, 1);
+  if (_lwpPeriods.length === 0) _lwpPeriods.push({ start:'', end:'' });
+  renderLwpPeriods();
+  updateTenure();
 }
 
 // ===== 健保眷屬動態渲染 =====
@@ -913,15 +956,15 @@ function updateTenure() {
   if (!d) { document.getElementById('f_tenure').value = ''; return; }
   var hire = new Date(d);
   var now = new Date();
-  // 扣除留職停薪期間
-  var lwpS = document.getElementById('f_lwpStart');
-  var lwpE = document.getElementById('f_lwpEnd');
-  if (lwpS && lwpE && lwpS.value && lwpE.value) {
-    var s = new Date(lwpS.value), e = new Date(lwpE.value);
-    if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e >= s) {
-      now = new Date(now.getTime() - (e - s + 86400000));
-    }
-  }
+  // 扣除全部段留職停薪
+  var totalMs = 0;
+  (_lwpPeriods || []).forEach(function(p){
+    if (!p || !p.start || !p.end) return;
+    var s = new Date(p.start), e = new Date(p.end);
+    if (isNaN(s.getTime()) || isNaN(e.getTime()) || e < s) return;
+    totalMs += (e - s + 86400000);
+  });
+  if (totalMs > 0) now = new Date(now.getTime() - totalMs);
   var years  = now.getFullYear() - hire.getFullYear();
   var months = now.getMonth()    - hire.getMonth();
   var days   = now.getDate()     - hire.getDate();
@@ -1004,8 +1047,7 @@ function removeFile(e, field) {
 function collectForm() {
   var ids = ['empNo','name','clinic','hireDate','contractDate','position','jobType','birthday','idNo',
              'tel','mobile','email','address','referrer','emgName','emgRelation','emgPhone',
-             'education','school','gradStatus','bankBranch','bankAccount','depListName',
-             'lwpStart','lwpEnd'];
+             'education','school','gradStatus','bankBranch','bankAccount','depListName'];
   var data = {};
   ids.forEach(function(k){
     var el = document.getElementById('f_' + k);
@@ -1020,6 +1062,13 @@ function collectForm() {
     data[prefix+'Relation'] = (d.relation || '').trim();
     data[prefix+'Birthday'] = (d.birthday || '').trim();
     data[prefix+'IdNo']     = (d.idNo     || '').trim();
+  });
+  // 留職停薪 1~5 段：lwp1 → lwpStart/lwpEnd（保留舊命名），lwp2 → lwp2Start...
+  [0,1,2,3,4].forEach(function(i){
+    var prefix = (i === 0) ? 'lwp' : ('lwp' + (i+1));
+    var p = _lwpPeriods[i] || {};
+    data[prefix+'Start'] = (p.start || '').trim();
+    data[prefix+'End']   = (p.end   || '').trim();
   });
   // 檔案 URL
   data.passbookUrl = (_pendingFiles.passbook && _pendingFiles.passbook.url) || '';
@@ -1059,7 +1108,7 @@ function saveForm() {
 function resetForm() {
   ['empNo','name','hireDate','contractDate','tenure','birthday','idNo','tel','mobile','email','address',
    'referrer','emgName','emgPhone','school','bankBranch','bankAccount',
-   'depListName','lwpStart','lwpEnd'].forEach(function(k){
+   'depListName'].forEach(function(k){
     var el = document.getElementById('f_'+k);
     if (el) el.value = '';
   });
@@ -1071,6 +1120,8 @@ function resetForm() {
   ['passbook','idFront','idBack'].forEach(function(f){ removeFile(null, f); });
   _dependents = [{ name:'', relation:'', birthday:'', idNo:'' }];
   renderDependents();
+  _lwpPeriods = [{ start:'', end:'' }];
+  renderLwpPeriods();
   _editMode = false;
   _originalEmpNo = '';
   fetchNextEmpNo();
@@ -1245,7 +1296,7 @@ function buildDetailHtml(r) {
     row('緊急聯絡人', r.emgName) + row('關係', r.emgRelation) + row('電話', r.emgPhone) + row('', '') +
     row('學歷', r.education) + row('學校', r.school) + row('畢/肄', r.gradStatus) + row('', '') +
     row('薪轉分行', r.bankBranch) + row('薪轉帳號', r.bankAccount) + row('', '') + row('', '') +
-    row('留職停薪起', fmtDateShort(r.lwpStart)) + row('留職停薪訖', fmtDateShort(r.lwpEnd)) + row('','') + row('','') +
+    buildLwpHtml(r.lwpPeriods) +
     fileRow('存摺', r.passbookUrl) + fileRow('身分證正面', r.idFrontUrl) + fileRow('身分證背面', r.idBackUrl) + row('', '') +
     row('眷屬概述', r.depListName) + row('','') + row('','') + row('','') +
     buildDepsHtml(r.dependents) +
@@ -1254,6 +1305,18 @@ function buildDetailHtml(r) {
       row('修改者', r.modifier) + row('修改時間', fmtDateTimeShort(r.modifyTime)) +
     '</div>' +
   '</div>';
+}
+function buildLwpHtml(periods) {
+  if (!periods || periods.length === 0) return '';
+  var html = '';
+  periods.forEach(function(p, i){
+    html += '<div class="field full" style="border-top:1px dashed var(--border);padding-top:6px;margin-top:4px;">' +
+      '<label>留職停薪 ' + (i+1) + '</label>' +
+      '<div style="padding:4px 0;">' +
+        escapeHtml(fmtDateShort(p.start)||'—') + ' ~ ' + escapeHtml(fmtDateShort(p.end)||'—') +
+      '</div></div>';
+  });
+  return html;
 }
 function buildDepsHtml(deps) {
   if (!deps || deps.length === 0) return '';
@@ -1289,8 +1352,7 @@ function editEmp() {
     address:r.address,referrer:r.referrer,emgName:r.emgName,emgRelation:r.emgRelation,emgPhone:r.emgPhone,
     education:r.education,school:r.school,gradStatus:r.gradStatus,
     bankBranch:r.bankBranch,bankAccount:r.bankAccount,
-    depListName:r.depListName,
-    lwpStart:fmtDateShort(r.lwpStart), lwpEnd:fmtDateShort(r.lwpEnd)
+    depListName:r.depListName
   };
   Object.keys(map).forEach(function(k){
     var el = document.getElementById('f_'+k);
@@ -1305,6 +1367,15 @@ function editEmp() {
     _dependents = [{ name:'', relation:'', birthday:'', idNo:'' }];
   }
   renderDependents();
+  // 留職停薪陣列
+  if (r.lwpPeriods && r.lwpPeriods.length > 0) {
+    _lwpPeriods = r.lwpPeriods.map(function(p){
+      return { start: fmtDateShort(p.start), end: fmtDateShort(p.end) };
+    });
+  } else {
+    _lwpPeriods = [{ start:'', end:'' }];
+  }
+  renderLwpPeriods();
   updateTenure();
   // 檔案預覽
   ['passbook','idFront','idBack'].forEach(function(f){
