@@ -595,6 +595,16 @@
         <div id="depContainer"></div>
       </div>
 
+      <div class="card">
+        <h2>備註</h2>
+        <div class="form-grid">
+          <div class="field full">
+            <label>其他事項 (自由填寫)</label>
+            <textarea id="f_notes" rows="4" style="padding:8px 10px;border:1px solid var(--border);border-radius:5px;font-family:inherit;font-size:14px;resize:vertical;" placeholder="例如：試用期表現、特殊技能、醫療注意事項..."></textarea>
+          </div>
+        </div>
+      </div>
+
       <div class="btn-row">
         <button class="btn secondary" onclick="resetForm()">清空表單</button>
         <button class="btn" id="btnSave" onclick="saveForm()">儲存員工資料</button>
@@ -1047,7 +1057,7 @@ function removeFile(e, field) {
 function collectForm() {
   var ids = ['empNo','name','clinic','hireDate','contractDate','position','jobType','birthday','idNo',
              'tel','mobile','email','address','referrer','emgName','emgRelation','emgPhone',
-             'education','school','gradStatus','bankBranch','bankAccount','depListName'];
+             'education','school','gradStatus','bankBranch','bankAccount','depListName','notes'];
   var data = {};
   ids.forEach(function(k){
     var el = document.getElementById('f_' + k);
@@ -1108,7 +1118,7 @@ function saveForm() {
 function resetForm() {
   ['empNo','name','hireDate','contractDate','tenure','birthday','idNo','tel','mobile','email','address',
    'referrer','emgName','emgPhone','school','bankBranch','bankAccount',
-   'depListName'].forEach(function(k){
+   'depListName','notes'].forEach(function(k){
     var el = document.getElementById('f_'+k);
     if (el) el.value = '';
   });
@@ -1300,6 +1310,9 @@ function buildDetailHtml(r) {
     fileRow('存摺', r.passbookUrl) + fileRow('身分證正面', r.idFrontUrl) + fileRow('身分證背面', r.idBackUrl) + row('', '') +
     row('眷屬概述', r.depListName) + row('','') + row('','') + row('','') +
     buildDepsHtml(r.dependents) +
+    (r.notes ? '<div class="field full" style="border-top:1px dashed var(--border);padding-top:8px;margin-top:6px;">' +
+      '<label>備註</label>' +
+      '<div style="padding:6px 0;white-space:pre-wrap;">'+escapeHtml(r.notes)+'</div></div>' : '') +
     '<div class="form-grid cols-4" style="grid-column:1/-1;">' +
       row('建立者', r.creator) + row('建立時間', fmtDateTimeShort(r.createTime)) +
       row('修改者', r.modifier) + row('修改時間', fmtDateTimeShort(r.modifyTime)) +
@@ -1352,7 +1365,7 @@ function editEmp() {
     address:r.address,referrer:r.referrer,emgName:r.emgName,emgRelation:r.emgRelation,emgPhone:r.emgPhone,
     education:r.education,school:r.school,gradStatus:r.gradStatus,
     bankBranch:r.bankBranch,bankAccount:r.bankAccount,
-    depListName:r.depListName
+    depListName:r.depListName,notes:r.notes
   };
   Object.keys(map).forEach(function(k){
     var el = document.getElementById('f_'+k);
@@ -1414,7 +1427,7 @@ function exportCsv() {
                  '學歷','學校','畢/肄','薪轉分行','薪轉帳號',
                  '存摺','身分證正面','身分證背面',
                  '眷屬概述','眷屬人數','眷屬列表',
-                 '在職狀態','離職日'];
+                 '在職狀態','離職日','備註'];
   var rows = [headers];
   _listRecs.forEach(function(r){
     var deps = r.dependents || [];
@@ -1426,7 +1439,7 @@ function exportCsv() {
       r.education,r.school,r.gradStatus,r.bankBranch,r.bankAccount,
       r.passbookUrl,r.idFrontUrl,r.idBackUrl,
       r.depListName, deps.length, depStr,
-      r.status,r.leaveDate]);
+      r.status,r.leaveDate,r.notes]);
   });
   var csv = rows.map(function(row){
     return row.map(function(v){
