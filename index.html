@@ -783,8 +783,9 @@ function clearSession() {
 function doLogin() {
   var user = document.getElementById('loginUser').value.trim();
   var pwd  = document.getElementById('loginPwd').value.trim();
-  if (!user || !pwd) { toast('請輸入帳號密碼','err'); return; }
-  apiGet({action:'login', user:user, password:pwd}, function(r){
+  if (!user || !pwd) { toast('請輸入員工編號和密碼','err'); return; }
+  // 用 pwd 而非 password 當參數名，避免某些瀏覽器/擴充功能擋掉含 password 的 URL 參數
+  apiGet({action:'login', user:user, pwd:pwd}, function(r){
     if (r.error) { toast(r.error, 'err'); return; }
     saveSession(r);
     enterMain();
